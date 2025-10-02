@@ -2,35 +2,31 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>Exportar Productos Jumpseller</title>
+  <title>Exportador de Productos Jumpseller</title>
   <style>
     body { font-family: Arial, sans-serif; padding: 20px; }
-    label { font-weight: bold; }
-    input { width: 300px; padding: 5px; margin-bottom: 10px; }
-    button { padding: 10px 20px; font-size: 16px; }
-    #mensaje { margin-top: 20px; font-weight: bold; }
+    input { margin: 5px 0; width: 300px; padding: 5px; }
+    button { padding: 8px 15px; margin-top: 10px; cursor: pointer; }
     #mensaje.success { color: green; }
     #mensaje.error { color: red; }
+    #loader { font-weight: bold; margin-top: 10px; display: none; }
   </style>
 </head>
 <body>
-  <h1>Exportar Productos Jumpseller a CSV</h1>
-
-  <label>Login:</label><br>
-  <input type="text" id="login" placeholder="Ingresá tu login"><br>
-
-  <label>Auth Token:</label><br>
-  <input type="text" id="token" placeholder="Ingresá tu Auth Token"><br><br>
-
+  <h1>Exportador de Productos Jumpseller</h1>
+  <input type="text" id="login" placeholder="Login"><br>
+  <input type="text" id="token" placeholder="Auth Token"><br>
   <button onclick="exportar()">Exportar Productos</button>
-
+  <div id="loader">⚡ Generando CSV… Esto puede tardar unos segundos.</div>
   <div id="mensaje"></div>
 
   <script>
+    const loader = document.getElementById("loader");
+    const mensaje = document.getElementById("mensaje");
+
     async function exportar() {
       const login = document.getElementById("login").value.trim();
       const token = document.getElementById("token").value.trim();
-      const mensaje = document.getElementById("mensaje");
 
       mensaje.textContent = '';
       mensaje.className = '';
@@ -42,11 +38,15 @@
       }
 
       try {
+        loader.style.display = "block";
+
         const response = await fetch("/export", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ login, token })
         });
+
+        loader.style.display = "none";
 
         if (response.ok) {
           const blob = await response.blob();
@@ -66,6 +66,7 @@
           mensaje.className = "error";
         }
       } catch (err) {
+        loader.style.display = "none";
         mensaje.textContent = "Error de conexión o credenciales incorrectas";
         mensaje.className = "error";
       }
