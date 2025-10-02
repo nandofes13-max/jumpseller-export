@@ -1,12 +1,14 @@
 const express = require("express");
-const axios = require("axios");
+const fetch = require("node-fetch");
 const { Parser } = require("json2csv");
+const bodyParser = require("body-parser");
 
 const app = express();
-app.use(express.json());
+const PORT = process.env.PORT || 3000;
+
+app.use(bodyParser.json());
 app.use(express.static("public"));
 
-// Endpoint para exportar CSV usando credenciales temporales del usuario
 app.post("/export", async (req, res) => {
   const { login, token } = req.body;
 
@@ -14,48 +16,75 @@ app.post("/export", async (req, res) => {
     return res.status(400).json({ error: "Faltan credenciales" });
   }
 
-  let page = 1;
-  let allProducts = [];
-
   try {
-    while (true) {
-      const url = `https://${login}:${token}@api.jumpseller.com/v1/products.json?page=${page}&limit=200`;
-      const response = await axios.get(url);
+    let allProducts = [];
+    let page = 1;
+    let morePages = true;
 
-      if (!response.data || response.data.length === 0) break;
+    while (morePages) {
+      const url = `https://api.jumpseller.com/v1/products.json?page=${page}&limit=200`;
+      const response = await fetch(url, {
+        headers: { Authorization: `Basic ${Buffer.from(`${login}:${token}`).toString("base64")}` }
+      });
 
-      allProducts = allProducts.concat(response.data.map(p => p.product));
+      if (!response.ok) {
+        return res.status(response.status).json({ error: "Error al llamar API" });
+      }
+
+      const data = await response.json();
+      if (data.length === 0) {
+        morePages = false;
+        break;
+      }
+
+      allProducts = allProducts.concat(data.map(p => p.product));
       page++;
     }
 
-    if (allProducts.length === 0) {
-      return res.status(404).json({ error: "No se encontraron productos" });
-    }
+    const mappedProducts = allProducts.map(p => ({
+      permalink: p.permalink || "",
+      name: p.name || "",
+      description: p.description || "",
+      page_title: p.page_title || "",
+      meta_description: p.meta_description || "",
+      width: p.width || 0,
+      length: p.length || 0,
+      height: p.height || 0,
+      brand: p.brand || "",
+      barcode: p.barcode || "",
+      categories: p.categories.map(c => c.name).join(", "),
+      images: p.images.map(i => i.url).join(", "),
+      digital: p.digital || false,
+      featured: p.featured || false,
+      status: p.status || "",
+      sku: p.sku || "",
+      weight: p.weight || 0,
+      cost_per_item: p.cost_per_item || "",
+      compare_at_price: p.compare_at_price || "",
+      stock: p.stock || 0,
+      stock_unlimited: p.stock_unlimited || false,
+      stock_notification: p.stock_notification || false,
+      stock_threshold: p.stock_threshold || 0,
+      price: p.price || 0,
+      minimum_quantity: p.minimum_quantity || "",
+      maximum_quantity: p.maximum_quantity || "",
+      custom_field_label: (p.fields[0] && p.fields[0].label) || "",
+      custom_field_value: (p.fields[0] && p.fields[0].value) || "",
+      custom_field_type: (p.fields[0] && p.fields[0].type) || "",
+      google_product_category: p.google_product_category || ""
+    }));
 
-    const fields = [
-      "permalink", "name", "description", "page_title", "meta_description",
-      "width", "length", "height", "brand", "barcode",
-      "categories", "images", "digital", "featured", "status",
-      "sku", "weight", "cost_per_item", "compare_at_price",
-      "stock", "stock_unlimited", "stock_notification", "stock_threshold",
-      "price", "minimum_quantity", "maximum_quantity",
-      "fields[0].label", "fields[0].value", "fields[0].type",
-      "google_product_category"
-    ];
+    const parser = new Parser();
+    const csv = parser.parse(mappedProducts);
 
-    const parser = new Parser({ fields });
-    const csv = parser.parse(allProducts);
-
-    // Enviar CSV al navegador sin guardar credenciales
     res.header("Content-Type", "text/csv");
     res.attachment("Productos.csv");
-    return res.send(csv);
+    res.send(csv);
 
-  } catch (error) {
-    console.error("Error al exportar:", error.message);
-    return res.status(500).json({ error: "Error al exportar productos" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Error interno del servidor" });
   }
 });
 
-const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Servidor corriendo en puerto ${PORT}`));
