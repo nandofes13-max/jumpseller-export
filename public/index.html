@@ -1,39 +1,75 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <title>Exportador Jumpseller</title>
+  <meta charset="UTF-8">
+  <title>Exportar Productos Jumpseller</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; }
+    label { font-weight: bold; }
+    input { width: 300px; padding: 5px; margin-bottom: 10px; }
+    button { padding: 10px 20px; font-size: 16px; }
+    #mensaje { margin-top: 20px; font-weight: bold; }
+    #mensaje.success { color: green; }
+    #mensaje.error { color: red; }
+  </style>
 </head>
 <body>
   <h1>Exportar Productos Jumpseller a CSV</h1>
-  <form id="credForm">
-    <label>Tienda (subdominio, ej: mitienda): <input type="text" id="store" /></label><br/>
-    <label>API Key/Login: <input type="text" id="apiKey" /></label><br/>
-    <label>API Password/Token: <input type="text" id="apiPass" /></label><br/>
-    <button type="submit">Guardar Credenciales</button>
-  </form>
-  <br/>
-  <button id="exportBtn">Exportar Productos.csv</button>
+
+  <label>Login:</label><br>
+  <input type="text" id="login" placeholder="Ingresá tu login"><br>
+
+  <label>Auth Token:</label><br>
+  <input type="text" id="token" placeholder="Ingresá tu Auth Token"><br><br>
+
+  <button onclick="exportar()">Exportar Productos</button>
+
+  <div id="mensaje"></div>
 
   <script>
-    document.getElementById("credForm").addEventListener("submit", async (e) => {
-      e.preventDefault();
-      const store = document.getElementById("store").value;
-      const apiKey = document.getElementById("apiKey").value;
-      const apiPass = document.getElementById("apiPass").value;
-      
-      const res = await fetch("/set-credentials", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ store, apiKey, apiPass })
-      });
-      const data = await res.json();
-      alert(data.message || data.error);
-    });
+    async function exportar() {
+      const login = document.getElementById("login").value.trim();
+      const token = document.getElementById("token").value.trim();
+      const mensaje = document.getElementById("mensaje");
 
-    document.getElementById("exportBtn").addEventListener("click", () => {
-      window.location.href = "/export-products";
-    });
+      mensaje.textContent = '';
+      mensaje.className = '';
+
+      if (!login || !token) {
+        mensaje.textContent = "Faltan credenciales";
+        mensaje.className = "error";
+        return;
+      }
+
+      try {
+        const response = await fetch("/export", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ login, token })
+        });
+
+        if (response.ok) {
+          const blob = await response.blob();
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = "Productos.csv";
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+
+          mensaje.textContent = "CSV generado correctamente. La descarga comenzó.";
+          mensaje.className = "success";
+        } else {
+          const data = await response.json();
+          mensaje.textContent = data.error || "Error al exportar";
+          mensaje.className = "error";
+        }
+      } catch (err) {
+        mensaje.textContent = "Error de conexión o credenciales incorrectas";
+        mensaje.className = "error";
+      }
+    }
   </script>
 </body>
 </html>
