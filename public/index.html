@@ -1,59 +1,118 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Exportar Productos Jumpseller</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f4f4f4;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+    .container {
+      background: #fff;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0px 0px 10px rgba(0,0,0,0.1);
+      width: 100%;
+      max-width: 400px;
+      text-align: center;
+    }
+    h2 {
+      margin-bottom: 20px;
+    }
+    input {
+      width: 100%;
+      padding: 10px;
+      margin: 8px 0;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+    button {
+      width: 100%;
+      padding: 10px;
+      background: #28a745;
+      border: none;
+      color: #fff;
+      font-size: 16px;
+      border-radius: 5px;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+    button:hover {
+      background: #218838;
+    }
+    #message {
+      margin-top: 15px;
+      font-weight: bold;
+      color: red;
+    }
+  </style>
 </head>
 <body>
-  <h2>Exportar Productos de Jumpseller</h2>
-  <form id="exportForm">
-    <label>Email (usuario Jumpseller):</label><br>
-    <input type="text" id="email" required><br><br>
-
-    <label>API Key:</label><br>
-    <input type="password" id="apiKey" required><br><br>
-
-    <button type="submit">Exportar productos</button>
-  </form>
-
-  <div id="status" style="margin-top:20px; color: red;"></div>
+  <div class="container">
+    <h2>Exportar Productos</h2>
+    <input type="text" id="login" placeholder="Login Jumpseller" />
+    <input type="password" id="apiKey" placeholder="API Key" />
+    <button onclick="saveCredentials()">Guardar Credenciales</button>
+    <button onclick="exportProducts()">Exportar Productos CSV</button>
+    <p id="message"></p>
+  </div>
 
   <script>
-    document.getElementById("exportForm").addEventListener("submit", async function (e) {
-      e.preventDefault();
-      const email = document.getElementById("email").value;
-      const apiKey = document.getElementById("apiKey").value;
-      const statusDiv = document.getElementById("status");
-      statusDiv.textContent = "Procesando exportación...";
+    async function saveCredentials() {
+      const login = document.getElementById('login').value;
+      const apiKey = document.getElementById('apiKey').value;
+
+      if (!login || !apiKey) {
+        document.getElementById('message').innerText = "⚠️ Complete ambos campos.";
+        return;
+      }
+
+      document.getElementById('message').innerText = "✅ Credenciales guardadas correctamente.";
+    }
+
+    async function exportProducts() {
+      const login = document.getElementById('login').value;
+      const apiKey = document.getElementById('apiKey').value;
+
+      if (!login || !apiKey) {
+        document.getElementById('message').innerText = "⚠️ Debe ingresar credenciales antes de exportar.";
+        return;
+      }
 
       try {
-        const response = await fetch("/export", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email, apiKey })
+        const response = await fetch('/export', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ login, apiKey })
         });
 
         if (!response.ok) {
-          const errData = await response.json();
-          throw new Error(errData.message + " → " + errData.detail);
+          const errorText = await response.text();
+          document.getElementById('message').innerText = "❌ Error: " + errorText;
+          return;
         }
 
         const blob = await response.blob();
         const url = window.URL.createObjectURL(blob);
-        const a = document.createElement("a");
+        const a = document.createElement('a');
         a.href = url;
-        a.download = "products.csv";
+        a.download = "productos.csv";
         document.body.appendChild(a);
         a.click();
         a.remove();
-
-        statusDiv.style.color = "green";
-        statusDiv.textContent = "✅ Exportación completada con éxito";
+        document.getElementById('message').innerText = "✅ Archivo exportado con éxito.";
       } catch (error) {
-        statusDiv.style.color = "red";
-        statusDiv.textContent = "❌ " + error.message;
+        document.getElementById('message').innerText = "❌ Error al exportar productos: " + error.message;
       }
-    });
+    }
   </script>
 </body>
 </html>
