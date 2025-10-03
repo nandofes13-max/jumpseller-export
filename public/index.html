@@ -2,47 +2,91 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Exportar Productos Jumpseller</title>
   <style>
-    body { font-family: Arial, sans-serif; margin: 40px; }
-    label { display: block; margin-top: 10px; }
-    button { margin-top: 20px; padding: 10px 15px; }
-    #status { margin-top: 20px; font-weight: bold; }
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f6f9;
+      padding: 40px;
+      text-align: center;
+    }
+    h1 {
+      color: #333;
+    }
+    form {
+      margin: 20px auto;
+      padding: 20px;
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      max-width: 400px;
+      text-align: left;
+    }
+    label {
+      display: block;
+      margin-bottom: 10px;
+      font-weight: bold;
+    }
+    input {
+      width: 100%;
+      padding: 8px;
+      margin-top: 4px;
+      margin-bottom: 15px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+    button {
+      background: #4CAF50;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      font-size: 16px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #45a049;
+    }
+    #message {
+      margin-top: 20px;
+      font-weight: bold;
+      color: #333;
+    }
   </style>
 </head>
 <body>
-  <h1>Exportar Productos desde Jumpseller</h1>
+  <h1>Exportar Productos Jumpseller</h1>
   <form id="exportForm">
-    <label>Login: <input type="text" id="login" required /></label>
-    <label>Auth Token: <input type="text" id="token" required /></label>
-    <label>Store: <input type="text" id="store" required /></label>
+    <label>Login:
+      <input type="text" id="login" required />
+    </label>
+    <label>Auth Token:
+      <input type="text" id="token" required />
+    </label>
     <button type="submit">Exportar Productos</button>
   </form>
-  <div id="status"></div>
+  <div id="message"></div>
 
   <script>
     const form = document.getElementById("exportForm");
-    const statusDiv = document.getElementById("status");
+    const message = document.getElementById("message");
 
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
-      statusDiv.innerText = "⏳ Generando CSV, espere por favor...";
+      message.textContent = "Generando archivo CSV, por favor espere...";
 
       const login = document.getElementById("login").value;
       const token = document.getElementById("token").value;
-      const store = document.getElementById("store").value;
 
       try {
         const response = await fetch("/export", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ login, token, store })
+          body: JSON.stringify({ login, token })
         });
 
-        if (!response.ok) {
-          const error = await response.json();
-          throw new Error(error.error || "Error desconocido");
-        }
+        if (!response.ok) throw new Error("Error en la exportación");
 
         const blob = await response.blob();
         const url = window.URL.createObjectURL(blob);
@@ -53,9 +97,10 @@
         a.click();
         a.remove();
 
-        statusDiv.innerText = "✅ Exportación completada, archivo descargado.";
+        message.textContent = "✅ Exportación completada. Archivo descargado.";
       } catch (err) {
-        statusDiv.innerText = "❌ Error: " + err.message;
+        console.error(err);
+        message.textContent = "❌ Error al exportar productos.";
       }
     });
   </script>
