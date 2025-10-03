@@ -1,76 +1,63 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <title>Exportador de Productos Jumpseller</title>
+  <meta charset="UTF-8" />
+  <title>Exportar Productos Jumpseller</title>
   <style>
-    body { font-family: Arial, sans-serif; padding: 20px; }
-    input { margin: 5px 0; width: 300px; padding: 5px; }
-    button { padding: 8px 15px; margin-top: 10px; cursor: pointer; }
-    #mensaje.success { color: green; }
-    #mensaje.error { color: red; }
-    #loader { font-weight: bold; margin-top: 10px; display: none; }
+    body { font-family: Arial, sans-serif; margin: 40px; }
+    label { display: block; margin-top: 10px; }
+    button { margin-top: 20px; padding: 10px 15px; }
+    #status { margin-top: 20px; font-weight: bold; }
   </style>
 </head>
 <body>
-  <h1>Exportador de Productos Jumpseller</h1>
-  <input type="text" id="login" placeholder="Login"><br>
-  <input type="text" id="token" placeholder="Auth Token"><br>
-  <button onclick="exportar()">Exportar Productos</button>
-  <div id="loader">⚡ Generando CSV… Esto puede tardar unos segundos.</div>
-  <div id="mensaje"></div>
+  <h1>Exportar Productos desde Jumpseller</h1>
+  <form id="exportForm">
+    <label>Login: <input type="text" id="login" required /></label>
+    <label>Auth Token: <input type="text" id="token" required /></label>
+    <label>Store: <input type="text" id="store" required /></label>
+    <button type="submit">Exportar Productos</button>
+  </form>
+  <div id="status"></div>
 
   <script>
-    const loader = document.getElementById("loader");
-    const mensaje = document.getElementById("mensaje");
+    const form = document.getElementById("exportForm");
+    const statusDiv = document.getElementById("status");
 
-    async function exportar() {
-      const login = document.getElementById("login").value.trim();
-      const token = document.getElementById("token").value.trim();
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      statusDiv.innerText = "⏳ Generando CSV, espere por favor...";
 
-      mensaje.textContent = '';
-      mensaje.className = '';
-
-      if (!login || !token) {
-        mensaje.textContent = "Faltan credenciales";
-        mensaje.className = "error";
-        return;
-      }
+      const login = document.getElementById("login").value;
+      const token = document.getElementById("token").value;
+      const store = document.getElementById("store").value;
 
       try {
-        loader.style.display = "block";
-
         const response = await fetch("/export", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ login, token })
+          body: JSON.stringify({ login, token, store })
         });
 
-        loader.style.display = "none";
-
-        if (response.ok) {
-          const blob = await response.blob();
-          const url = window.URL.createObjectURL(blob);
-          const a = document.createElement("a");
-          a.href = url;
-          a.download = "Productos.csv";
-          document.body.appendChild(a);
-          a.click();
-          a.remove();
-
-          mensaje.textContent = "CSV generado correctamente. La descarga comenzó.";
-          mensaje.className = "success";
-        } else {
-          const data = await response.json();
-          mensaje.textContent = data.error || "Error al exportar";
-          mensaje.className = "error";
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error || "Error desconocido");
         }
+
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "productos.csv";
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+
+        statusDiv.innerText = "✅ Exportación completada, archivo descargado.";
       } catch (err) {
-        loader.style.display = "none";
-        mensaje.textContent = "Error de conexión o credenciales incorrectas";
-        mensaje.className = "error";
+        statusDiv.innerText = "❌ Error: " + err.message;
       }
-    }
+    });
   </script>
 </body>
 </html>
