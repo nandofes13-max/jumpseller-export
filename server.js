@@ -1,99 +1,74 @@
 import express from "express";
 import fetch from "node-fetch";
-import { Parser } from "json2csv";
+import { createObjectCsvStringifier } from "csv-writer";
+import bodyParser from "body-parser";
 
 const app = express();
-app.use(express.json());
+const PORT = process.env.PORT || 3000;
+
 app.use(express.static("public"));
+app.use(bodyParser.json());
 
+// Ruta de prueba
+app.get("/ping", (req, res) => {
+  res.send("✅ Servidor funcionando correctamente.");
+});
+
+// Exportar productos
 app.post("/export", async (req, res) => {
-  const { email, apiKey } = req.body;
+  const { login, apiKey } = req.body;
 
-  if (!email || !apiKey) {
-    return res.status(400).json({ message: "Faltan credenciales" });
+  if (!login || !apiKey) {
+    return res.status(400).send("Faltan credenciales (login o API key).");
   }
 
   try {
-    let allProducts = [];
-    let page = 1;
-    let hasMore = true;
-
-    while (hasMore) {
-      const response = await fetch(
-        `https://api.jumpseller.com/v1/products.json?page=${page}&limit=200`,
-        {
-          headers: {
-            Authorization: "Basic " + Buffer.from(`${email}:${apiKey}`).toString("base64"),
-          },
-        }
-      );
-
-      if (!response.ok) {
-        const errText = await response.text();
-        throw new Error(`Error API Jumpseller (HTTP ${response.status}): ${errText}`);
+    const response = await fetch("https://api.jumpseller.com/v1/products.json", {
+      headers: {
+        Authorization: "Basic " + Buffer.from(`${login}:${apiKey}`).toString("base64")
       }
+    });
 
-      const data = await response.json();
-      if (data.length === 0) {
-        hasMore = false;
-      } else {
-        allProducts = allProducts.concat(data);
-        page++;
-      }
+    if (!response.ok) {
+      const errorText = await response.text();
+      return res.status(response.status).send("Error en API Jumpseller: " + errorText);
     }
 
-    // ✅ Transformación de productos
-    const products = allProducts.map((p) => {
-      return {
-        permalink: p.product.permalink || "",
-        name: p.product.name || "",
-        description: p.product.description || "",
-        page_title: p.product.page_title || "",
-        meta_description: p.product.meta_description || "",
-        width: p.product.width || 0,
-        length: p.product.length || 0,
-        height: p.product.height || 0,
-        brand: p.product.brand || "",
-        barcode: p.product.barcode || "",
-        categories: (p.product.categories || []).map((c) => c.name).join(" / "),
-        images: (p.product.images || []).map((img) => img.url).join(","),
-        digital: p.product.digital ? "YES" : "NO",
-        featured: p.product.featured ? "YES" : "NO",
-        status: p.product.status || "",
-        sku: p.product.sku || "",
-        weight: p.product.weight || 0,
-        cost_per_item: p.product.cost_per_item || "",
-        compare_at_price: p.product.compare_at_price || "",
-        stock: p.product.stock || 0,
-        stock_unlimited: p.product.stock_unlimited ? "YES" : "NO",
-        stock_notification: p.product.stock_notification ? "YES" : "NO",
-        stock_threshold: p.product.stock_threshold || 0,
-        price: p.product.price || 0,
-        minimum_quantity: p.product.minimum_quantity || "",
-        maximum_quantity: p.product.maximum_quantity || "",
-        custom_field_1_label: p.product.fields?.[0]?.label || "",
-        custom_field_1_value: p.product.fields?.[0]?.value || "",
-        custom_field_1_type: p.product.fields?.[0]?.type || "",
-        google_product_category: p.product.google_product_category || "",
-      };
+    const data = await response.json();
+
+    if (!Array.isArray(data)) {
+      return res.status(500).send("Respuesta inesperada de Jumpseller.");
+    }
+
+    // Armar CSV
+    const csvStringifier = createObjectCsvStringifier({
+      header: [
+        { id: "id", title: "ID" },
+        { id: "name", title: "Nombre" },
+        { id: "price", title: "Precio" },
+        { id: "stock", title: "Stock" }
+      ]
     });
 
-    const parser = new Parser();
-    const csv = parser.parse(products);
+    const records = data.map(prod => ({
+      id: prod.id,
+      name: prod.name,
+      price: prod.price,
+      stock: prod.stock
+    }));
 
-    res.header("Content-Type", "text/csv");
-    res.attachment("products.csv");
-    return res.send(csv);
+    const csv = csvStringifier.getHeaderString() + csvStringifier.stringifyRecords(records);
+
+    res.setHeader("Content-Type", "text/csv");
+    res.setHeader("Content-Disposition", "attachment; filename=productos.csv");
+    res.send(csv);
+
   } catch (error) {
-    console.error("Error en la API:", error.message);
-    return res.status(500).json({
-      message: "Error al exportar productos",
-      detail: error.message,
-    });
+    console.error("❌ Error al exportar:", error);
+    res.status(500).send("Error interno: " + error.message);
   }
 });
 
-const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`Servidor corriendo en puerto ${PORT}`);
+  console.log(`🚀 Servidor corriendo en puerto ${PORT}`);
 });
