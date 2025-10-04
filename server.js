@@ -1,33 +1,47 @@
 import express from "express";
 import fetch from "node-fetch";
-import { parse } from "json2csv";
 import cors from "cors";
+import path from "path";
+import { fileURLToPath } from "url";
+import { Parser } from "json2csv";
 
 const app = express();
+const PORT = process.env.PORT || 10000;
+
 app.use(cors());
 app.use(express.json());
 
-app.post("/export-products", async (req, res) => {
-  const { email, token, store } = req.body;
+// Configuración para poder usar __dirname en ES Modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
-  if (!email || !token || !store) {
-    return res.status(400).json({ error: "Faltan credenciales" });
-  }
+// Servir archivos estáticos desde la carpeta public
+app.use(express.static(path.join(__dirname, "public")));
 
+// Ruta raíz -> devolver index.html
+app.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "index.html"));
+});
+
+// Ruta para exportar productos
+app.post("/export", async (req, res) => {
   try {
-    const response = await fetch(`https://api.jumpseller.com/v1/products.json`, {
+    const { apiKey, apiSecret } = req.body;
+
+    const response = await fetch("https://api.jumpseller.com/v1/products.json", {
       headers: {
-        Authorization: `Basic ${Buffer.from(`${email}:${token}`).toString("base64")}`,
+        Authorization: "Basic " + Buffer.from(`${apiKey}:${apiSecret}`).toString("base64"),
       },
     });
 
     if (!response.ok) {
-      throw new Error(`Error API Jumpseller: ${response.statusText}`);
+      const errorText = await response.text();
+      return res.status(response.status).json({ error: errorText });
     }
 
     const data = await response.json();
-    const products = data.map((p) => mapProduct(p.product));
 
+    // Transformar productos al formato CSV con los campos que definimos
     const fields = [
       "permalink",
       "name",
@@ -58,58 +72,57 @@ app.post("/export-products", async (req, res) => {
       "fields[0].label",
       "fields[0].value",
       "fields[0].type",
-      "google_product_category",
+      "google_product_category"
     ];
 
-    const csv = parse(products, { fields });
+    const opts = { fields };
+    const parser = new Parser(opts);
+
+    // Mapear productos para dar formato correcto a ciertos campos
+    const productos = data.map((p) => ({
+      permalink: p.permalink,
+      name: p.name,
+      description: p.description,
+      page_title: p.page_title,
+      meta_description: p.meta_description,
+      width: p.width || 0,
+      length: p.length || 0,
+      height: p.height || 0,
+      brand: p.brand,
+      barcode: p.barcode,
+      categories: p.categories ? p.categories.map(c => c.name).join(" / ") : "",
+      images: p.images && p.images[0] ? p.images[0].url : "",
+      digital: p.digital ? "YES" : "NO",
+      featured: p.featured ? "YES" : "NO",
+      status: p.status,
+      sku: p.sku,
+      weight: p.weight || 0,
+      cost_per_item: p.cost_per_item || "",
+      compare_at_price: p.compare_at_price || "",
+      stock: p.stock,
+      stock_unlimited: p.stock_unlimited ? "YES" : "NO",
+      stock_notification: p.stock_notification ? "YES" : "NO",
+      stock_threshold: p.stock_threshold || 0,
+      price: p.price,
+      minimum_quantity: p.minimum_quantity || "",
+      maximum_quantity: p.maximum_quantity || "",
+      "fields[0].label": p.fields && p.fields[0] ? p.fields[0].label : "",
+      "fields[0].value": p.fields && p.fields[0] ? p.fields[0].value : "",
+      "fields[0].type": p.fields && p.fields[0] ? p.fields[0].type : "",
+      google_product_category: p.google_product_category || ""
+    }));
+
+    const csv = parser.parse(productos);
 
     res.header("Content-Type", "text/csv");
-    res.attachment("products.csv");
-    return res.send(csv);
+    res.attachment("productos.csv");
+    res.send(csv);
   } catch (error) {
-    console.error("Error al exportar productos:", error);
-    res.status(500).json({ error: "Error al exportar productos", detail: error.message });
+    console.error("Error en exportación:", error);
+    res.status(500).json({ error: error.message });
   }
 });
 
-function mapProduct(product) {
-  return {
-    permalink: product.permalink,
-    name: product.name,
-    description: product.description,
-    page_title: product.page_title,
-    meta_description: product.meta_description,
-    width: "0.0",
-    length: "0.0",
-    height: "0.0",
-    brand: product.brand,
-    barcode: product.barcode,
-    categories: product.categories
-      ? product.categories.map((c, i) => (i === 0 ? c.name : `${product.categories[0].name} / ${c.name}`)).join(",")
-      : "",
-    images: product.images?.length ? product.images[0].url : "",
-    digital: product.digital ? "YES" : "NO",
-    featured: product.featured ? "YES" : "NO",
-    status: product.status,
-    sku: product.sku,
-    weight: product.weight,
-    cost_per_item: product.cost_per_item ? Number(product.cost_per_item).toFixed(1) : "",
-    compare_at_price: product.compare_at_price || "",
-    stock: product.stock || 0,
-    stock_unlimited: product.stock_unlimited ? "YES" : "NO",
-    stock_notification: product.stock_notification ? "YES" : "NO",
-    stock_threshold: product.stock_threshold || 0,
-    price: product.price ? Number(product.price).toFixed(1) : "",
-    minimum_quantity: "",
-    maximum_quantity: "",
-    "fields[0].label": "Fecha",
-    "fields[0].value": new Date().toLocaleDateString("es-AR"),
-    "fields[0].type": "input",
-    google_product_category: "",
-  };
-}
-
-const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Servidor corriendo en puerto ${PORT}`);
 });
