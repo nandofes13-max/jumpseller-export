@@ -23,10 +23,14 @@ app.post("/export", async (req, res) => {
     const authHeader = "Basic " + Buffer.from(`${login}:${token}`).toString("base64");
 
     // Obtener productos de Jumpseller
-    const response = await fetch("https://api.jumpseller.com/v1/products.json", {
-      headers: { Authorization: authHeader }
-    });
-
+   const response = await fetch("https://api.jumpseller.com/v1/products.json", {
+  method: "GET",
+  headers: {
+    "Authorization": authHeader,
+    "Accept": "application/json",
+    "User-Agent": "JumpsellerExportApp/1.0"
+  }
+});
     if (!response.ok) {
       const errText = await response.text();
       console.error("❌ Error Jumpseller:", errText);
