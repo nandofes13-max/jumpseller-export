@@ -3,7 +3,6 @@
   "version": "1.0.0",
   "description": "Herramienta para exportar productos desde Jumpseller a CSV",
   "main": "server.js",
-  "type": "module",
   "scripts": {
   "start": "node server.cjs"
 }
