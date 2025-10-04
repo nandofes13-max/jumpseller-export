@@ -1,4 +1,6 @@
-    body { font-family: Arial, sans-serif; margin: 40px; }
-    label { display: block; margin-top: 10px; }
-    button { margin-top: 20px; padding: 10px 15px; }
-    #status { margin-top: 20px; font-weight: bold; }
+body { font-family: Arial, sans-serif; padding: 20px; }
+input { margin: 5px 0; width: 300px; padding: 5px; }
+button { padding: 8px 15px; margin-top: 10px; cursor: pointer; }
+#mensaje.success { color: green; }
+#mensaje.error { color: red; }
+#loader { font-weight: bold; margin-top: 10px; display: none; }
