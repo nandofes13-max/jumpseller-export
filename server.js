@@ -1,89 +1,115 @@
-const express = require("express");
-const fetch = require("node-fetch");
-const { Parser } = require("json2csv");
-const bodyParser = require("body-parser");
+import express from "express";
+import fetch from "node-fetch";
+import { parse } from "json2csv";
+import cors from "cors";
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+app.use(cors());
+app.use(express.json());
 
-app.use(bodyParser.json());
-app.use(express.static("public"));
+app.post("/export-products", async (req, res) => {
+  const { email, token, store } = req.body;
 
-app.post("/export", async (req, res) => {
-  const { login, token } = req.body;
-
-  if (!login || !token) {
+  if (!email || !token || !store) {
     return res.status(400).json({ error: "Faltan credenciales" });
   }
 
   try {
-    let allProducts = [];
-    let page = 1;
-    let morePages = true;
+    const response = await fetch(`https://api.jumpseller.com/v1/products.json`, {
+      headers: {
+        Authorization: `Basic ${Buffer.from(`${email}:${token}`).toString("base64")}`,
+      },
+    });
 
-    while (morePages) {
-      const url = `https://api.jumpseller.com/v1/products.json?page=${page}&limit=200`;
-      const response = await fetch(url, {
-        headers: { Authorization: `Basic ${Buffer.from(`${login}:${token}`).toString("base64")}` }
-      });
-
-      if (!response.ok) {
-        return res.status(response.status).json({ error: "Error al llamar API" });
-      }
-
-      const data = await response.json();
-      if (data.length === 0) {
-        morePages = false;
-        break;
-      }
-
-      allProducts = allProducts.concat(data.map(p => p.product));
-      page++;
+    if (!response.ok) {
+      throw new Error(`Error API Jumpseller: ${response.statusText}`);
     }
 
-    const mappedProducts = allProducts.map(p => ({
-      permalink: p.permalink || "",
-      name: p.name || "",
-      description: p.description || "",
-      page_title: p.page_title || "",
-      meta_description: p.meta_description || "",
-      width: p.width || 0,
-      length: p.length || 0,
-      height: p.height || 0,
-      brand: p.brand || "",
-      barcode: p.barcode || "",
-      categories: p.categories.map(c => c.name).join(", "),
-      images: p.images.map(i => i.url).join(", "),
-      digital: p.digital || false,
-      featured: p.featured || false,
-      status: p.status || "",
-      sku: p.sku || "",
-      weight: p.weight || 0,
-      cost_per_item: p.cost_per_item || "",
-      compare_at_price: p.compare_at_price || "",
-      stock: p.stock || 0,
-      stock_unlimited: p.stock_unlimited || false,
-      stock_notification: p.stock_notification || false,
-      stock_threshold: p.stock_threshold || 0,
-      price: p.price || 0,
-      minimum_quantity: p.minimum_quantity || "",
-      maximum_quantity: p.maximum_quantity || "",
-      custom_field_label: (p.fields[0] && p.fields[0].label) || "",
-      custom_field_value: (p.fields[0] && p.fields[0].value) || "",
-      custom_field_type: (p.fields[0] && p.fields[0].type) || "",
-      google_product_category: p.google_product_category || ""
-    }));
+    const data = await response.json();
+    const products = data.map((p) => mapProduct(p.product));
 
-    const parser = new Parser();
-    const csv = parser.parse(mappedProducts);
+    const fields = [
+      "permalink",
+      "name",
+      "description",
+      "page_title",
+      "meta_description",
+      "width",
+      "length",
+      "height",
+      "brand",
+      "barcode",
+      "categories",
+      "images",
+      "digital",
+      "featured",
+      "status",
+      "sku",
+      "weight",
+      "cost_per_item",
+      "compare_at_price",
+      "stock",
+      "stock_unlimited",
+      "stock_notification",
+      "stock_threshold",
+      "price",
+      "minimum_quantity",
+      "maximum_quantity",
+      "fields[0].label",
+      "fields[0].value",
+      "fields[0].type",
+      "google_product_category",
+    ];
+
+    const csv = parse(products, { fields });
 
     res.header("Content-Type", "text/csv");
-    res.attachment("Productos.csv");
-    res.send(csv);
-
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Error interno del servidor" });
+    res.attachment("products.csv");
+    return res.send(csv);
+  } catch (error) {
+    console.error("Error al exportar productos:", error);
+    res.status(500).json({ error: "Error al exportar productos", detail: error.message });
   }
 });
-app.listen(PORT, () => console.log(`Servidor corriendo en puerto ${PORT}`));
+
+function mapProduct(product) {
+  return {
+    permalink: product.permalink,
+    name: product.name,
+    description: product.description,
+    page_title: product.page_title,
+    meta_description: product.meta_description,
+    width: "0.0",
+    length: "0.0",
+    height: "0.0",
+    brand: product.brand,
+    barcode: product.barcode,
+    categories: product.categories
+      ? product.categories.map((c, i) => (i === 0 ? c.name : `${product.categories[0].name} / ${c.name}`)).join(",")
+      : "",
+    images: product.images?.length ? product.images[0].url : "",
+    digital: product.digital ? "YES" : "NO",
+    featured: product.featured ? "YES" : "NO",
+    status: product.status,
+    sku: product.sku,
+    weight: product.weight,
+    cost_per_item: product.cost_per_item ? Number(product.cost_per_item).toFixed(1) : "",
+    compare_at_price: product.compare_at_price || "",
+    stock: product.stock || 0,
+    stock_unlimited: product.stock_unlimited ? "YES" : "NO",
+    stock_notification: product.stock_notification ? "YES" : "NO",
+    stock_threshold: product.stock_threshold || 0,
+    price: product.price ? Number(product.price).toFixed(1) : "",
+    minimum_quantity: "",
+    maximum_quantity: "",
+    "fields[0].label": "Fecha",
+    "fields[0].value": new Date().toLocaleDateString("es-AR"),
+    "fields[0].type": "input",
+    google_product_category: "",
+  };
+}
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`Servidor corriendo en puerto ${PORT}`);
+});
