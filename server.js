@@ -64,17 +64,17 @@ categories: p.categories
 
   images: p.images.map(i => i.url).join(", "),
 
-  // Booleanos en SI/NO
-  digital: p.digital ? "SI" : "NO",
-  featured: p.featured ? "SI" : "NO",
+  // Booleanos en YES/NO
+  digital: p.digital ? "YES" : "NO",
+  featured: p.featured ? "YES" : "NO",
   status: p.status || "",
   sku: p.sku || "",
   weight: parseFloat(p.weight || 0).toFixed(1),
   cost_per_item: p.cost_per_item || "",
   compare_at_price: p.compare_at_price || "",
   stock: p.stock || 0,
-  stock_unlimited: p.stock_unlimited ? "SI" : "NO",
-  stock_notification: p.stock_notification ? "SI" : "NO",
+  stock_unlimited: p.stock_unlimited ? "YES" : "NO",
+  stock_notification: p.stock_notification ? "YES" : "NO",
   stock_threshold: p.stock_threshold || 0,
   price: parseFloat(p.price || 0).toFixed(1),
   minimum_quantity: p.minimum_quantity || "",
