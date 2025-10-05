@@ -24,7 +24,9 @@ app.post("/export", async (req, res) => {
     while (morePages) {
       const url = `https://api.jumpseller.com/v1/products.json?page=${page}&limit=200`;
       const response = await fetch(url, {
-        headers: { Authorization: `Basic ${Buffer.from(`${login}:${token}`).toString("base64")}` }
+        headers: {
+          Authorization: `Basic ${Buffer.from(`${login}:${token}`).toString("base64")}`
+        }
       });
 
       if (!response.ok) {
@@ -74,7 +76,16 @@ app.post("/export", async (req, res) => {
       google_product_category: p.google_product_category || ""
     }));
 
-    const parser = new Parser();
+    // ✅ Generar encabezados con mayúscula inicial
+    let fields = [];
+    if (mappedProducts.length > 0) {
+      fields = Object.keys(mappedProducts[0]).map(key => ({
+        label: key.charAt(0).toUpperCase() + key.slice(1),
+        value: key
+      }));
+    }
+
+    const parser = new Parser({ fields });
     const csv = parser.parse(mappedProducts);
 
     res.header("Content-Type", "text/csv");
@@ -86,4 +97,5 @@ app.post("/export", async (req, res) => {
     res.status(500).json({ error: "Error interno del servidor" });
   }
 });
+
 app.listen(PORT, () => console.log(`Servidor corriendo en puerto ${PORT}`));
