@@ -57,9 +57,7 @@ app.post("/export", async (req, res) => {
 
   // Categorías jerárquicas: Golosinas, Golosinas / Alfajores
 categories: p.categories
-  .map((c, i) =>
-    i === 0 ? c.name : `${p.categories[i - 1].name} / ${c.name}`
-  )
+  .map((c, i) => p.categories.slice(0, i + 1).map(x => x.name).join(" / "))
   .join(","),
 
   images: p.images.map(i => i.url).join(", "),
