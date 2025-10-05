@@ -44,53 +44,43 @@ app.post("/export", async (req, res) => {
     }
 
     const mappedProducts = allProducts.map(p => ({
+  id: p.id || 0,
   permalink: p.permalink || "",
   name: p.name || "",
-  description: p.description || "",
   page_title: p.page_title || "",
-  meta_description: p.meta_description || "",
-  width: parseFloat(p.width || 0).toFixed(1),
-  length: parseFloat(p.length || 0).toFixed(1),
-  height: parseFloat(p.height || 0).toFixed(1),
-  brand: p.brand || "",
-  barcode: p.barcode ? `'${p.barcode}'` : "",
-
-  // Categorías jerárquicas: Golosinas, Golosinas / Alfajores
-categories: p.categories
-  .map((c, i) => p.categories.slice(0, i + 1).map(x => x.name).join(" / "))
-  .join(","),
-
-  images: p.images.map(i => i.url).join(", "),
-
-  // Booleanos en YES/NO
-  digital: p.digital ? "YES" : "NO",
-  featured: p.featured ? "YES" : "NO",
-  status: p.status || "",
-  sku: p.sku || "",
-  weight: parseFloat(p.weight || 0).toFixed(1),
-  cost_per_item: p.cost_per_item || "",
-  compare_at_price: p.compare_at_price || "",
+  description: p.description || "",
+  type: p.type || "",
+  days_to_expire: p.days_to_expire || 365,
+  price: p.price || 0.0,
+  discount: p.discount || 0.0,
+  weight: p.weight || 0.0,
+  length: p.length || 0.0,
+  width: p.width || 0.0,
+  height: p.height || 0.0,
+  diameter: p.diameter || 0.0,
+  cost_per_item: p.cost_per_item || 0.0,
+  compare_at_price: p.compare_at_price || 0.0,
   stock: p.stock || 0,
-  stock_unlimited: p.stock_unlimited ? "YES" : "NO",
-  stock_notification: p.stock_notification ? "YES" : "NO",
+  stock_unlimited: p.stock_unlimited || false,
   stock_threshold: p.stock_threshold || 0,
-  price: parseFloat(p.price || 0).toFixed(1),
-  minimum_quantity: p.minimum_quantity || "",
-  maximum_quantity: p.maximum_quantity || "",
-  custom_field_label: (p.fields[0] && p.fields[0].label) || "",
-  custom_field_value: (p.fields[0] && p.fields[0].value) || "",
-  custom_field_type: (p.fields[0] && p.fields[0].type) || "",
-  google_product_category: p.google_product_category || ""
+  stock_notification: p.stock_notification || false,
+  back_in_stock_enabled: p.back_in_stock_enabled || false,
+  sku: p.sku || "",
+  brand: p.brand || "",
+  barcode: p.barcode || "",
+  google_product_category: p.google_product_category || "",
+  featured: p.featured || false,
+  reviews_enabled: p.reviews_enabled || false,
+  status: p.status || "available",
+  created_at: p.created_at || "",
+  updated_at: p.updated_at || "",
+  package_format: p.package_format || "",
+  categories: p.categories || [],
+  images: p.images || [],
+  variants: p.variants || [],
+  digital_products: p.digital_products || []
 }));
 
-    // ✅ Generar encabezados con mayúscula inicial
-    let fields = [];
-    if (mappedProducts.length > 0) {
-      fields = Object.keys(mappedProducts[0]).map(key => ({
-        label: key.charAt(0).toUpperCase() + key.slice(1),
-        value: key
-      }));
-    }
 
     const parser = new Parser({ fields });
     const csv = parser.parse(mappedProducts);
