@@ -56,11 +56,11 @@ app.post("/export", async (req, res) => {
   barcode: p.barcode || "",
 
   // Categorías jerárquicas: Golosinas, Golosinas / Alfajores
-  categories: p.categories
-    .map((c, i) =>
-      i === 0 ? c.name : `${p.categories[i - 1].name} / ${c.name}`
-    )
-    .join(", "),
+categories: p.categories
+  .map((c, i) =>
+    i === 0 ? c.name : `${p.categories[i - 1].name} / ${c.name}`
+  )
+  .join(","),
 
   images: p.images.map(i => i.url).join(", "),
 
