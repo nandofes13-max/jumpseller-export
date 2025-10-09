@@ -96,9 +96,6 @@ const parser = new Parser({
   }))
 });
 
-const csv = parser.parse(mappedProducts);
-
-
     // ✅ Generar encabezados con mayúscula inicial
     let fields = [];
     if (mappedProducts.length > 0) {
