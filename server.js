@@ -54,15 +54,10 @@ app.post("/export", async (req, res) => {
   height: parseFloat(p.height || 0),
   brand: p.brand || "",
   barcode: p.barcode || "",
-
-  // Categorías jerárquicas: Golosinas, Golosinas / Alfajores
   categories: p.categories
     .map((c, i) => p.categories.slice(0, i + 1).map(x => x.name).join(" / "))
     .join(","),
-
   images: p.images.map(i => i.url).join(", "),
-
-  // Booleanos en formato JSON (true/false)
   digital: !!p.digital,
   featured: !!p.featured,
   status: p.status || "",
@@ -82,6 +77,27 @@ app.post("/export", async (req, res) => {
   custom_field_type: (p.fields[0] && p.fields[0].type) || "",
   google_product_category: p.google_product_category || ""
 }));
+
+// 🔠 Reemplazar guiones bajos y ajustar títulos de columnas antes de exportar
+const formatHeader = header => {
+  if (header === "sku") return "SKU"; // caso especial
+  return header
+    .split("_")
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
+};
+
+// Si usás json2csv u otra librería similar:
+const { Parser } = require("json2csv");
+const parser = new Parser({
+  fields: Object.keys(mappedProducts[0]).map(h => ({
+    label: formatHeader(h),
+    value: h
+  }))
+});
+
+const csv = parser.parse(mappedProducts);
+
 
     // ✅ Generar encabezados con mayúscula inicial
     let fields = [];
