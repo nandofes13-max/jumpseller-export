@@ -43,40 +43,40 @@ app.post("/export", async (req, res) => {
       page++;
     }
 
-    const mappedProducts = allProducts.map(p => ({
+   const mappedProducts = allProducts.map(p => ({
   permalink: p.permalink || "",
   name: p.name || "",
   description: p.description || "",
   page_title: p.page_title || "",
   meta_description: p.meta_description || "",
-  width: parseFloat(p.width || 0).toFixed(1),
-  length: parseFloat(p.length || 0).toFixed(1),
-  height: parseFloat(p.height || 0).toFixed(1),
+  width: parseFloat(p.width || 0),
+  length: parseFloat(p.length || 0),
+  height: parseFloat(p.height || 0),
   brand: p.brand || "",
-  barcode: p.barcode ? `'${p.barcode}'` : "",
+  barcode: p.barcode || "",
 
   // Categorías jerárquicas: Golosinas, Golosinas / Alfajores
-categories: p.categories
-  .map((c, i) => p.categories.slice(0, i + 1).map(x => x.name).join(" / "))
-  .join(","),
+  categories: p.categories
+    .map((c, i) => p.categories.slice(0, i + 1).map(x => x.name).join(" / "))
+    .join(","),
 
   images: p.images.map(i => i.url).join(", "),
 
-  // Booleanos en YES/NO
-  digital: p.digital ? "YES" : "NO",
-  featured: p.featured ? "YES" : "NO",
+  // Booleanos en formato JSON (true/false)
+  digital: !!p.digital,
+  featured: !!p.featured,
   status: p.status || "",
   sku: p.sku || "",
-  weight: parseFloat(p.weight || 0).toFixed(1),
-  cost_per_item: p.cost_per_item || "",
-  compare_at_price: p.compare_at_price || "",
-  stock: p.stock || 0,
-  stock_unlimited: p.stock_unlimited ? "YES" : "NO",
-  stock_notification: p.stock_notification ? "YES" : "NO",
-  stock_threshold: p.stock_threshold || 0,
-  price: parseFloat(p.price || 0).toFixed(1),
-  minimum_quantity: p.minimum_quantity || "",
-  maximum_quantity: p.maximum_quantity || "",
+  weight: parseFloat(p.weight || 0),
+  cost_per_item: parseFloat(p.cost_per_item || 0),
+  compare_at_price: parseFloat(p.compare_at_price || 0),
+  stock: parseInt(p.stock || 0),
+  stock_unlimited: !!p.stock_unlimited,
+  stock_notification: !!p.stock_notification,
+  stock_threshold: parseInt(p.stock_threshold || 0),
+  price: parseFloat(p.price || 0),
+  minimum_quantity: parseInt(p.minimum_quantity || 0),
+  maximum_quantity: parseInt(p.maximum_quantity || 0),
   custom_field_label: (p.fields[0] && p.fields[0].label) || "",
   custom_field_value: (p.fields[0] && p.fields[0].value) || "",
   custom_field_type: (p.fields[0] && p.fields[0].type) || "",
