@@ -53,7 +53,7 @@ app.post("/export", async (req, res) => {
   length: parseFloat(p.length || 0).toFixed(1),
   height: parseFloat(p.height || 0).toFixed(1),
   brand: p.brand || "",
-  barcode: p.barcode ? `'${p.barcode}'` : "",
+  barcode: p.barcode || "",    
 
   // Categorías jerárquicas: Golosinas, Golosinas / Alfajores
 categories: p.categories
