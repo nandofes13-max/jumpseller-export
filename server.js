@@ -74,7 +74,7 @@ app.post("/export", async (req, res) => {
       stock_unlimited: !!p.stock_unlimited,
       stock_notification: !!p.stock_notification,
       stock_threshold: parseInt(p.stock_threshold || 0),
-      price: parseFloat(p.price || 0),
+      price: parseFloat(p.price || 0).toFixed(1),
       minimum_quantity: parseInt(p.minimum_quantity || 0),
       maximum_quantity: parseInt(p.maximum_quantity || 0),
       custom_field_label:
